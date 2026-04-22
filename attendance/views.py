@@ -3,9 +3,11 @@ from datetime import datetime
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.timezone import make_aware
-from .models import Student, DailyAttendance
+from .models import Student, DailyAttendance, SMS
 
-
+import sys
+import serial
+print(f"WORKER SHOULD USE THIS: {sys.executable}")
 def home(request):
     return HttpResponse("working")
 
@@ -28,7 +30,6 @@ def receive_attendance(request):
         try:
             student = Student.objects.get(device_user_id=user_id)
             
-           
             timestamp = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
             timestamp = make_aware(timestamp)
 
@@ -54,4 +55,35 @@ def receive_attendance(request):
         except Student.DoesNotExist:
             return JsonResponse({"error": "Student not found"}, status=404)
     return JsonResponse({"error": "invalid request"}, status=400)
+
+
+def send_to_student(request, student_id): 
+    student = Student.objects.get(id=student_id)
+    message = request.GET.get("message")
+    
+
+    SMS.objects.create(
+        student=Student,
+        phone=student.phone,
+        message=message
+
+    )
+    
+    return JsonResponse({"status": "queued"})
+
+
+def send_to_group(request):
+    group = request.get('group')
+    message = request.GET.get("message")
+
+    students = Student.objects.filter(group=group)
+
+    for s in students:
+        SMS.objects.create(
+            student=s,
+            phone=s.add,
+            message=message
+        )
+
+    return JsonResponse({"status": "group queued"})
 
