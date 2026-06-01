@@ -10,7 +10,13 @@ class Student(models.Model):
 
     def __str__(self):
         return self.name
-    
+
+
+class AttendanceLog(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    device_log_id = models.IntegerField(unique=True)
+    timestamp = models.DateTimeField()
+
 
 class DailyAttendance(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
@@ -21,18 +27,36 @@ class DailyAttendance(models.Model):
 
     class Meta:
         unique_together = ('student', 'date')
-        
+
     def __str__(self):
-        return f"{self.student.name} - {self.date} - {self.check_in} - {self.check_out}"
+        return (
+            f"{self.student.name} - {self.date} - "
+            f"{self.check_in} - {self.check_out}"
+        )
 
 
-class SMS (models.Model):
-    batch_name = models.CharField(max_length=20)
+class SMS(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("sent", "Sent"),
+        ("failed", "Failed"),
+    ]
+
+    batch_name = models.CharField(max_length=20, blank=True, null=True)
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     phone = models.CharField(max_length=20)
     message = models.TextField()
-    status = models.CharField(max_length=20, default='pending')
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default="pending"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        verbose_name_plural = "SMS Logs"
+        ordering = ['-created_at']
+
     def __str__(self):
-        return f"{self.student} - {self.phone} - {self.message} - {self.status} - {self.created_at}"
+        return (
+            f"{self.student} - {self.phone} "
+            f"({self.status})"
+        )
